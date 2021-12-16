@@ -18,6 +18,7 @@
 #define __TESTCASE_JSON_HPP__
 
 #include <gtest/gtest.h>
+
 #include "JSON.hpp"
 
 class TestCase_JSON : public ::testing::Test
@@ -28,7 +29,11 @@ protected:
   virtual void SetUp();
   virtual void TearDown();
 
-  void testGetterCommon(JSON& json);
+#if JSON_SHARED_PTR
+  void testGetterCommon(std::shared_ptr<JSON> json);
+#else
+  void testGetterCommon(JSON json);
+#endif /* JSON_SHARED_PTR */
   void testFromString(void);
   void testSetter(void);
 };

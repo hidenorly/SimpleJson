@@ -22,3 +22,10 @@ int main(int argc, char **argv)
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+std::string FileUtil::readFileToString(std::string path)
+{
+  std::string result;
+
+  return result;
+}
