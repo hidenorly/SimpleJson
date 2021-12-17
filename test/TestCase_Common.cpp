@@ -23,9 +23,150 @@ int main(int argc, char **argv)
   return RUN_ALL_TESTS();
 }
 
+void FileStream::ensureFile(std::string path)
+{
+  if( !std::filesystem::exists( path ) ){
+    // TODO: ensure path recursively
+    std::ofstream stream( path, std::ios::out | std::ios::binary | std::ios::trunc );
+    stream.close();
+  }
+}
+
+FileStream::FileStream(std::string path)
+{
+  ensureFile( path );
+  mStream.open( path, std::ios::in | std::ios::out | std::ios::binary );
+  mOpened = true;
+  mPos = 0;
+}
+
+FileStream::~FileStream()
+{
+  close();
+}
+
+bool FileStream::isEndOfStream(void)
+{
+  return mOpened ? mStream.eof() : true;
+}
+
+int FileStream::read(ByteBuffer& buf)
+{
+  int nSize = 0;
+
+  if( mOpened ){
+    mStream.read( reinterpret_cast<char*>(buf.data()), buf.size() );
+    nSize = mStream.gcount();
+    if( buf.size() != nSize ){
+      buf.resize( nSize );
+    }
+  }
+
+  return nSize;
+}
+
+std::shared_ptr<ByteBuffer> FileStream::read(void)
+{
+  std::shared_ptr<ByteBuffer> buf;
+
+  if( mOpened ){
+    buf = std::make_shared<ByteBuffer>();
+    read(*buf);
+  }
+
+  return buf;
+}
+
+void FileStream::write(ByteBuffer& buf)
+{
+  if( mOpened ){
+    // mStream.write( reinterpret_cast<char*>(buf.data()), buf.size() );
+    // THE ABOVE SHOULD WORK BUT DOESN'T WORK THEN THE FOLLOWING IS WORKAROUND.
+    for(int i=0; i<buf.size(); i++){
+      mStream.seekp( mPos++ );
+      mStream.write( reinterpret_cast<char*>(&buf[i]), sizeof(char) );
+    }
+  }
+}
+
+
+bool FileStream::writeLine(std::string& line)
+{
+  bool result = !isEndOfStream();
+
+  if( result ){
+    mStream << line << std::endl;
+  }
+
+  return result;
+}
+
+bool FileStream::readLine(std::string& line)
+{
+  bool result = !isEndOfStream();
+
+  if( result ){
+    result = std::getline( mStream, line ) ? true : false;
+  }
+
+  return result;
+}
+
+void FileStream::close(void)
+{
+  if( mOpened ){
+    mStream.close();
+    mOpened = false;
+  }
+}
+
+StringTokenizer::StringTokenizer(std::string sourceString, std::string token) : mBuf(sourceString), mToken(token), mPos(0)
+{
+  mBufLength = sourceString.length();
+  mTokenLength = token.length();
+}
+
+StringTokenizer::~StringTokenizer()
+{
+
+}
+
+std::string StringTokenizer::getNext()
+{
+  std::string result = "";
+
+  int pos = mBuf.find( mToken, mPos );
+  if( pos != std::string::npos ){
+    result = mBuf.substr( mPos, pos - mPos );
+    mPos = pos + mTokenLength;
+  } else {
+    result = mBuf.substr( mPos );
+    mPos = mBuf.length();
+  }
+
+  return result;
+}
+
+bool StringTokenizer::hasNext(void)
+{
+  return ( mPos < mBufLength ) ? true : false;
+}
+
+
 std::string FileUtil::readFileToString(std::string path)
 {
   std::string result;
+
+  std::shared_ptr<FileStream> pStream = std::make_shared<FileStream>( path );
+  if( pStream ){
+    std::string aLine;
+    while( !pStream->isEndOfStream() ){
+      if( pStream->readLine( aLine ) ){
+        result += StringUtil::trim( aLine );
+      }
+    }
+    pStream->close();
+  }
 
   return result;
 }
