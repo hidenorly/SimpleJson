@@ -26,11 +26,50 @@
   #define null "null"
 #endif
 
+#include <iostream>
+
 class StringUtil
 {
 public:
-  static std::string trim(std::string value, std::string trimString = " \r\n\t" )
+  static std::string trim2(std::string value, std::string trimStrings )
   {
+    bool bFound = false;
+    for(int i=0, trimSize = trimStrings.size(); i<trimSize; i++){
+      std::string trimString = trimStrings.substr( i, 1 );
+      do
+      {
+        bFound = false;
+        if( value.starts_with( trimString ) ){
+          value = value.substr( 1, value.size() -1 );
+          bFound = true;
+        }
+        if( value.ends_with( trimString ) ){
+          value = value.substr( 0, value.size() -1 );
+          bFound = true;
+        }
+      } while (bFound);
+    }
+    // workaround for unable to find "\"" in the above loop....
+    do
+    {
+      bFound = false;
+      if( value.starts_with( "\"" ) ){
+        value = value.substr( 1, value.size() -1 );
+        bFound = true;
+      }
+      if( value.ends_with( "\"" ) ){
+        value = value.substr( 0, value.size() -1 );
+        bFound = true;
+      }
+    } while (bFound);
+
+    return value;
+  }
+
+  static std::string trim(std::string value )
+  {
+    static const std::string trimString = " \r\n\t";
+
     int nPos = value.find_last_not_of( trimString );
     if( nPos != std::string::npos ){
       value = value.substr( 0, nPos+1 );
