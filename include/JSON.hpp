@@ -20,10 +20,30 @@
 #include <memory>
 #include <map>
 #include <vector>
+#include <string>
 
 #ifndef null
   #define null "null"
 #endif
+
+class StringUtil
+{
+public:
+  static std::string trim(std::string value, std::string trimString = " \r\n\t" )
+  {
+    int nPos = value.find_last_not_of( trimString );
+    if( nPos != std::string::npos ){
+      value = value.substr( 0, nPos+1 );
+    }
+
+    nPos = value.find_first_not_of( trimString );
+    if( nPos != std::string::npos ){
+      value = value.substr( nPos );
+    }
+
+    return value;
+  }
+};
 
 #define JSON_SHARED_PTR 1
 
@@ -44,12 +64,15 @@ protected:
   std::string mValue;
 
 public:
+  static std::shared_ptr<JSON> parse(std::string jsonString, std::shared_ptr<JSON> pJson = nullptr);
   virtual std::shared_ptr<JSON> getSharedPtr(void){
     return shared_from_this();
   }
 
 public:
-  JSON(std::string jsonString = ""):mType(JSON_TYPE::TYPE_HASH), mValue(""){};
+  JSON(std::string jsonString = ""):mType(JSON_TYPE::TYPE_HASH), mValue(""){
+    JSON::parse( jsonString );
+  };
   virtual ~JSON(){};
 
   virtual int getCount(void){
