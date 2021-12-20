@@ -17,6 +17,29 @@
 #include <gtest/gtest.h>
 #include "TestCase_Common.hpp"
 
+class StringUtil
+{
+public:
+  static std::string trim(std::string value )
+  {
+    static const std::string trimString = " \r\n\t";
+
+    int nPos = value.find_last_not_of( trimString );
+    if( nPos != std::string::npos ){
+      value = value.substr( 0, nPos+1 );
+    }
+
+    nPos = value.find_first_not_of( trimString );
+    if( nPos != std::string::npos ){
+      value = value.substr( nPos );
+    }
+
+    return value;
+  }
+};
+
+
+
 int main(int argc, char **argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
@@ -118,38 +141,6 @@ void FileStream::close(void)
     mStream.close();
     mOpened = false;
   }
-}
-
-StringTokenizer::StringTokenizer(std::string sourceString, std::string token) : mBuf(sourceString), mToken(token), mPos(0)
-{
-  mBufLength = sourceString.length();
-  mTokenLength = token.length();
-}
-
-StringTokenizer::~StringTokenizer()
-{
-
-}
-
-std::string StringTokenizer::getNext()
-{
-  std::string result = "";
-
-  int pos = mBuf.find( mToken, mPos );
-  if( pos != std::string::npos ){
-    result = mBuf.substr( mPos, pos - mPos );
-    mPos = pos + mTokenLength;
-  } else {
-    result = mBuf.substr( mPos );
-    mPos = mBuf.length();
-  }
-
-  return result;
-}
-
-bool StringTokenizer::hasNext(void)
-{
-  return ( mPos < mBufLength ) ? true : false;
 }
 
 

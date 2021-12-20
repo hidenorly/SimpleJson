@@ -14,5 +14,10 @@
 			"key5":null
 		},
 	],
-	"key6":3.14159
+	"key6":3.14159,
+	"key7":{
+		"key8":"value8",
+		"key9":"value9",
+		"key10":"value10"
+	}
 }

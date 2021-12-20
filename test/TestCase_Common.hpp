@@ -90,24 +90,6 @@ public:
 };
 
 
-class StringTokenizer
-{
-protected:
-  std::string mBuf;
-  std::string mToken;
-  int mPos;
-  int mBufLength;
-  int mTokenLength;
-
-public:
-  StringTokenizer(std::string sourceString, std::string token);
-  virtual ~StringTokenizer();
-
-  std::string getNext();
-  bool hasNext(void);
-};
-
-
 class FileUtil
 {
 public:

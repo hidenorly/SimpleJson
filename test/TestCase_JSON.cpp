@@ -61,6 +61,10 @@ void TestCase_JSON::testGetterCommon(std::shared_ptr<JSON> json)
   EXPECT_TRUE( *((*json)["key6"]) == "3.14159" );
   EXPECT_TRUE( (*json)["key6"]->getFloat() == 3.14159f );
   EXPECT_TRUE( (*json)["key6"]->getInt() == 3 );
+
+  EXPECT_TRUE( (*json)["key6"]->isValue() );
+  EXPECT_TRUE( json->getObjectRelativePath("key6")->getString() == "3.14159" );
+  EXPECT_TRUE( *(json->getObjectRelativePath("key2.0")) == "value2-1" );
 }
 #else /* JSON_SHARED_PTR */
 void TestCase_JSON::testGetterCommon(JSON json)
@@ -111,6 +115,7 @@ TEST_F(TestCase_JSON, testSetter)
   EXPECT_TRUE( (*json)["key1"]->getString() == "value1" );
   EXPECT_TRUE( *((*json)["key1"]) == "value1" );
 
+  // FIXME
   *((*json)["key2"]) = JSONArray();
   (*json)["key2"]->push_back( "value2-1" );
   (*json)["key2"]->push_back( "value2-2" );

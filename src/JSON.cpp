@@ -18,7 +18,257 @@
 #include <vector>
 #include <iostream>
 
-std::string getHierachyKey(std::vector<std::string> keys)
+class StringUtil
+{
+public:
+  static std::string trim(std::string value, std::string trimStrings )
+  {
+    bool bFound = false;
+    for(int i=0, trimSize = trimStrings.size(); i<trimSize; i++){
+      std::string trimString = trimStrings.substr( i, 1 );
+      do
+      {
+        bFound = false;
+        if( value.starts_with( trimString ) ){
+          value = value.substr( 1, value.size() -1 );
+          bFound = true;
+        }
+        if( value.ends_with( trimString ) ){
+          value = value.substr( 0, value.size() -1 );
+          bFound = true;
+        }
+      } while (bFound);
+    }
+    // workaround for unable to find "\"" in the above loop....
+    do
+    {
+      bFound = false;
+      if( value.starts_with( "\"" ) ){
+        value = value.substr( 1, value.size() -1 );
+        bFound = true;
+      }
+      if( value.ends_with( "\"" ) ){
+        value = value.substr( 0, value.size() -1 );
+        bFound = true;
+      }
+    } while (bFound);
+
+    return value;
+  }
+};
+
+
+class StringTokenizer
+{
+protected:
+  std::string mBuf;
+  std::string mToken;
+  int mPos;
+  int mBufLength;
+  int mTokenLength;
+
+public:
+  StringTokenizer(std::string sourceString, std::string token) : mBuf(sourceString), mToken(token), mPos(0)
+  {
+    mBufLength = sourceString.length();
+    mTokenLength = token.length();
+  }
+  virtual ~StringTokenizer(){};
+
+  std::string getNext(){
+    std::string result = "";
+
+    int pos = mBuf.find( mToken, mPos );
+    if( pos != std::string::npos ){
+      result = mBuf.substr( mPos, pos - mPos );
+      mPos = pos + mTokenLength;
+    } else {
+      result = mBuf.substr( mPos );
+      mPos = mBuf.length();
+    }
+
+    return result;
+  }
+  bool hasNext(void){
+    return ( mPos < mBufLength ) ? true : false;
+  }
+};
+
+
+std::shared_ptr<JSON> JSON::getSharedPtr(void)
+{
+  return shared_from_this();
+}
+
+JSON::JSON(std::string jsonString):mType(JSON_TYPE::TYPE_HASH), mValue("")
+{
+    JSON::parse( jsonString );
+}
+
+JSON::~JSON()
+{
+
+}
+
+int JSON::getCount(void)
+{
+  switch( mType ){
+    case JSON_TYPE::TYPE_ARRAY:
+      return mArrayData.size();
+    case JSON_TYPE::TYPE_HASH:
+      return mHashData.size();
+    default:
+      return mValue.empty() ? 1 : 0;
+  }
+}
+
+std::shared_ptr<JSON> JSON::operator[](std::string key){
+  if( !mHashData.contains( key ) ){
+    std::shared_ptr<JSON> json = std::make_shared<JSON>();
+    mHashData[key] = json;
+  }
+  return mHashData[key];
+}
+
+
+std::shared_ptr<JSON> JSON::operator[](int nIndex)
+{
+  std::shared_ptr<JSON> jsonValue;
+  switch( mType ){
+    case JSON_TYPE::TYPE_ARRAY:
+      jsonValue = mArrayData[nIndex];
+      break;
+    case JSON_TYPE::TYPE_HASH:
+    default:
+      jsonValue = mHashData[ std::to_string(nIndex) ];
+      break;
+  }
+  return jsonValue ? jsonValue : std::make_shared<JSON>();
+}
+
+std::string JSON::getString(void)
+{
+  switch( mType ){
+    case JSON_TYPE::TYPE_ARRAY:
+      return "TYPE_ARRAY";
+      break;
+    case JSON_TYPE::TYPE_HASH:
+      return "TYPE_HASH";
+    case JSON_TYPE::TYPE_VALUE:
+    default:
+      return mValue;
+  }
+}
+
+bool JSON::operator==(std::string value)
+{
+  return mValue == value;
+}
+
+void JSON::setValue(std::string value)
+{
+  mValue = value;
+  mType = JSON_TYPE::TYPE_VALUE;
+}
+
+void JSON::setValue(int value)
+{
+  setValue( std::to_string( value ) );
+}
+
+void JSON::setValue(float value)
+{
+  std::string strVal = std::to_string( value );
+  while( strVal.ends_with("0") ){
+    strVal = strVal.substr(0, strVal.size()-1);
+  }
+  setValue( strVal );
+}
+
+void JSON::setValue(bool value)
+{
+  setValue( std::string( value ? "true" : "false" ) );
+}
+
+std::shared_ptr<JSON> JSON::operator=(std::string value)
+{
+  setValue(value);
+  return getSharedPtr();
+}
+
+std::shared_ptr<JSON> JSON::operator=(int value)
+{
+  setValue(value);
+  return getSharedPtr();
+}
+
+std::shared_ptr<JSON> JSON::operator=(float value)
+{
+  setValue(value);
+  return getSharedPtr();
+}
+
+int JSON::getInt(void)
+{
+  return std::stoi( getString() );
+}
+
+float JSON::getFloat(void)
+{
+  return std::stof( getString() );
+}
+
+bool JSON::getBoolean(void)
+{
+  return getString() == "true";
+}
+
+bool JSON::isNull(void)
+{
+  std::string val = getString();
+  return mType == JSON_TYPE::TYPE_VALUE && ( val.empty() || val == "null" );
+}
+
+bool JSON::isHash(void)
+{
+  return mType == JSON_TYPE::TYPE_HASH;
+}
+
+bool JSON::isArray(void)
+{
+  return mType == JSON_TYPE::TYPE_ARRAY;
+}
+
+bool JSON::isValue(void)
+{
+  return mType == JSON_TYPE::TYPE_VALUE;
+}
+
+bool JSON::hasOwnProperty(std::string key)
+{
+  if( isHash() ){
+    return mHashData.contains( key );
+  } else if( isArray() ){
+    int nIndex = getIndex( key );
+    return nIndex!=-1 && nIndex < mArrayData.size();
+  }
+  return false;
+}
+
+void JSON::push_back(std::shared_ptr<JSON> jsonValue)
+{
+  mType = JSON_TYPE::TYPE_ARRAY;
+  mArrayData.push_back( jsonValue );
+}
+
+void JSON::push_back(std::string value)
+{
+  std::shared_ptr<JSON> jsonValue = std::make_shared<JSON>();
+  *jsonValue = value;
+  push_back( jsonValue );
+}
+
+std::string JSON::getHierachyKey(std::vector<std::string> keys)
 {
   std::string hierachyKey;
 
@@ -34,6 +284,51 @@ std::string getHierachyKey(std::vector<std::string> keys)
   return hierachyKey;
 }
 
+int JSON::getIndex(std::string key)
+{
+  int result = -1;
+  try {
+    result = std::stoi(key);
+  } catch (...) {
+    result = -1;
+  }
+  return result;
+}
+
+
+std::shared_ptr<JSON> JSON::getObjectRelativePath(std::string key, bool bForceEnsure)
+{
+  std::shared_ptr<JSON> result = getSharedPtr();
+
+  StringTokenizer hierachyKeys( key, "." );
+
+  while( hierachyKeys.hasNext() ){
+    std::string theKey = hierachyKeys.getNext();
+    if( result && !theKey.empty() ){
+      if( result->hasOwnProperty( theKey ) ){
+        if( isHash() ){
+          result = (*result)[ theKey ];
+        } else if( isArray() ){
+          int nIndex = getIndex( theKey );
+          if( nIndex>=0 ){
+            result = (*result)[ nIndex ];
+          } else {
+            result = std::make_shared<JSON>();
+            break;
+          }
+        }
+      } else {
+        // not found
+        result = std::make_shared<JSON>();
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+
 std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> pJson)
 {
   if( pJson ){
@@ -44,6 +339,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
   std::vector<JSON::JSON_TYPE> queue;
   int nKeyStart = 0, nKeyEnd = 0, nValueStart = 0, nValueEnd = 0;
   bool bFound = false;
+  bool bFoundEnd = false;
   std::vector<std::string> keyQueue;
   std::vector<std::string> flatData;
   std::string key;
@@ -65,7 +361,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
         break;
       case '}':
         {
-          keyQueue.pop_back();
+          bFoundEnd = true;
           queue.pop_back();
           type = queue.back();
           nValueEnd = i - 1;
@@ -84,7 +380,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
         break;
       case ']':
         {
-          keyQueue.pop_back();
+          bFoundEnd = true;
           queue.pop_back();
           type = queue.back();
           nValueEnd = i - 1;
@@ -110,7 +406,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
     if( bFound ){
       std::string value;
       if( nKeyEnd >= nKeyStart ){
-        key = StringUtil::trim2( jsonString.substr( nKeyStart, nKeyEnd-nKeyStart + 1 ), " \"[],{}:" );
+        key = StringUtil::trim( jsonString.substr( nKeyStart, nKeyEnd-nKeyStart + 1 ), " \"[],{}:" );
         if( !key.empty() ){
           nKeyStart = nKeyEnd + 2;
           nValueStart = nKeyStart;
@@ -118,10 +414,10 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
       }
 
       if( nValueEnd >= nValueStart){
-        value = StringUtil::trim2( jsonString.substr( nValueStart, nValueEnd-nValueStart + 1 ), " \"[],{}:" );
+        value = StringUtil::trim( jsonString.substr( nValueStart, nValueEnd-nValueStart + 1 ), " \"[],{}:" );
         if( !value.empty() ){
           nValueStart = nKeyStart = i + 1;
-          std::string theKey = getHierachyKey( keyQueue );
+          std::string theKey = JSON::getHierachyKey( keyQueue );
           if( theKey.empty() ){
             theKey = key;
           } else {
@@ -135,6 +431,10 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
           flatData.push_back( data );
         }
       }
+    }
+    if( bFoundEnd ){
+      keyQueue.pop_back();
+      bFoundEnd = false;
     }
 
     // handler of each JSON object mode

@@ -28,61 +28,6 @@
 
 #include <iostream>
 
-class StringUtil
-{
-public:
-  static std::string trim2(std::string value, std::string trimStrings )
-  {
-    bool bFound = false;
-    for(int i=0, trimSize = trimStrings.size(); i<trimSize; i++){
-      std::string trimString = trimStrings.substr( i, 1 );
-      do
-      {
-        bFound = false;
-        if( value.starts_with( trimString ) ){
-          value = value.substr( 1, value.size() -1 );
-          bFound = true;
-        }
-        if( value.ends_with( trimString ) ){
-          value = value.substr( 0, value.size() -1 );
-          bFound = true;
-        }
-      } while (bFound);
-    }
-    // workaround for unable to find "\"" in the above loop....
-    do
-    {
-      bFound = false;
-      if( value.starts_with( "\"" ) ){
-        value = value.substr( 1, value.size() -1 );
-        bFound = true;
-      }
-      if( value.ends_with( "\"" ) ){
-        value = value.substr( 0, value.size() -1 );
-        bFound = true;
-      }
-    } while (bFound);
-
-    return value;
-  }
-
-  static std::string trim(std::string value )
-  {
-    static const std::string trimString = " \r\n\t";
-
-    int nPos = value.find_last_not_of( trimString );
-    if( nPos != std::string::npos ){
-      value = value.substr( 0, nPos+1 );
-    }
-
-    nPos = value.find_first_not_of( trimString );
-    if( nPos != std::string::npos ){
-      value = value.substr( nPos );
-    }
-
-    return value;
-  }
-};
 
 #define JSON_SHARED_PTR 1
 
@@ -102,113 +47,51 @@ protected:
   std::vector<std::shared_ptr<JSON>> mArrayData;
   std::string mValue;
 
+protected:
+  static std::string getHierachyKey(std::vector<std::string> keys);
+  static int getIndex(std::string key);
+
 public:
   static std::shared_ptr<JSON> parse(std::string jsonString, std::shared_ptr<JSON> pJson = nullptr);
-  virtual std::shared_ptr<JSON> getSharedPtr(void){
-    return shared_from_this();
-  }
+  virtual std::shared_ptr<JSON> getSharedPtr(void);
 
 public:
-  JSON(std::string jsonString = ""):mType(JSON_TYPE::TYPE_HASH), mValue(""){
-    JSON::parse( jsonString );
-  };
-  virtual ~JSON(){};
+  JSON(std::string jsonString = "");
+  virtual ~JSON();
 
-  virtual int getCount(void){
-    switch( mType ){
-      case JSON_TYPE::TYPE_ARRAY:
-        return mArrayData.size();
-      case JSON_TYPE::TYPE_HASH:
-        return mHashData.size();
-      default:
-        return mValue.empty() ? 1 : 0;
-    }
-  };
+  virtual int getCount(void);
 
-  std::shared_ptr<JSON> operator[](std::string key){
-    if( !mHashData.contains( key ) ){
-      std::shared_ptr<JSON> json = std::make_shared<JSON>();
-      mHashData[key] = json;
-    }
-    return mHashData[key];
-  };
+  std::shared_ptr<JSON> operator[](std::string key);
+  std::shared_ptr<JSON> operator[](int nIndex);
 
-  std::shared_ptr<JSON> operator[](int nIndex){
-    std::shared_ptr<JSON> jsonValue;
-    switch( mType ){
-      case JSON_TYPE::TYPE_ARRAY:
-        jsonValue = mArrayData[nIndex];
-        break;
-      case JSON_TYPE::TYPE_HASH:
-      default:
-        jsonValue = mHashData[ std::to_string(nIndex) ];
-        break;
-    }
-    return jsonValue ? jsonValue : std::make_shared<JSON>();
-  };
+  std::shared_ptr<JSON> getObjectRelativePath(std::string key, bool bForceEnsure = false);
 
-  std::string getString(void){
-    switch( mType ){
-      case JSON_TYPE::TYPE_ARRAY:
-        return "TYPE_ARRAY";
-        break;
-      case JSON_TYPE::TYPE_HASH:
-        return "TYPE_HASH";
-      case JSON_TYPE::TYPE_VALUE:
-      default:
-        return mValue;
-    }
-  };
+  std::string getString(void);
 
-  bool operator==(std::string value){ return mValue == value; };
+  bool operator==(std::string value);
 
-  void setValue(std::string value){
-    mValue = value;
-    mType = JSON_TYPE::TYPE_VALUE;
-  }
-  void setValue(int value){ setValue( std::to_string( value ) ); };
-  void setValue(float value){
-    std::string strVal = std::to_string( value );
-    while( strVal.ends_with("0") ){
-      strVal = strVal.substr(0, strVal.size()-1);
-    }
-    setValue( strVal );
-  };
-  void setValue(bool value){  setValue( std::string( value ? "true" : "false" ) ); };
+  void setValue(std::string value);
+  void setValue(int value);
+  void setValue(float value);
+  void setValue(bool value);
 
-  std::shared_ptr<JSON> operator=(std::string value){
-    setValue(value);
-    return getSharedPtr();
-  }
+  std::shared_ptr<JSON> operator=(std::string value);
+  std::shared_ptr<JSON> operator=(int value);
+  std::shared_ptr<JSON> operator=(float value);
 
-  std::shared_ptr<JSON> operator=(int value){
-    setValue(value);
-    return getSharedPtr();
-  }
-  std::shared_ptr<JSON> operator=(float value){
-    setValue(value);
-    return getSharedPtr();
-  }
+  int getInt(void);
+  float getFloat(void);
+  bool getBoolean(void);
 
-  int getInt(void){ return std::stoi( getString() ); };
-  float getFloat(void){ return std::stof( getString() ); };
-  bool getBoolean(void){ return getString() == "true"; };
-  bool isNull(void){
-    std::string val = getString();
-    return mType == JSON_TYPE::TYPE_VALUE && ( val.empty() || val == "null" );
-  }
+  bool isNull(void);
+  bool isHash(void);
+  bool isArray(void);
+  bool isValue(void);
 
+  bool hasOwnProperty(std::string key);
 
-  virtual void push_back(std::shared_ptr<JSON> jsonValue){
-    mType = JSON_TYPE::TYPE_ARRAY;
-    mArrayData.push_back( jsonValue );
-  }
-
-  virtual void push_back(std::string value){
-    std::shared_ptr<JSON> jsonValue = std::make_shared<JSON>();
-    *jsonValue = value;
-    push_back( jsonValue );
-  }
+  virtual void push_back(std::shared_ptr<JSON> jsonValue);
+  virtual void push_back(std::string value);
 };
 
 #else /* JSON_SHARED_PTR */
