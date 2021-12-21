@@ -43,6 +43,7 @@ void TestCase_JSON::testGetterCommon(std::shared_ptr<JSON> json)
   EXPECT_TRUE( tmp->getCount() == 2 );
   EXPECT_TRUE( *((*tmp)[0]) == "value2-1" );
   EXPECT_TRUE( *((*tmp)[1]) == "value2-2" );
+  EXPECT_TRUE( tmp->isArray() );
 
   tmp = (*json)["key3"];
   EXPECT_TRUE( tmp->getCount() == 2 );
@@ -98,7 +99,7 @@ TEST_F(TestCase_JSON, testFromString)
 {
   std::string jsonString = FileUtil::readFileToString("test.json");
 #if JSON_SHARED_PTR
-  std::shared_ptr<JSON> json = std::make_shared<JSON>( jsonString );
+  std::shared_ptr<JSON> json = JSON::parse( jsonString );
 //   testGetterCommon( json );
 #else
    JSON json( jsonString );
@@ -115,13 +116,15 @@ TEST_F(TestCase_JSON, testSetter)
   EXPECT_TRUE( (*json)["key1"]->getString() == "value1" );
   EXPECT_TRUE( *((*json)["key1"]) == "value1" );
 
-  // FIXME
-  *((*json)["key2"]) = JSONArray();
-  (*json)["key2"]->push_back( "value2-1" );
-  (*json)["key2"]->push_back( "value2-2" );
+  std::shared_ptr<JSON> tmp = std::make_shared<JSONArray>();
+  tmp->push_back( "value2-1" );
+  tmp->push_back( "value2-2" );
+//  json->insert_or_assign( "key2", tmp );
+  *((*json)["key2"]) = tmp;
 
   EXPECT_TRUE( (*json)["key2"]->getCount() == 2 );
-  std::shared_ptr<JSON> tmp = (*json)["key2"];
+  EXPECT_TRUE( (*json)["key2"]->isArray() );
+  tmp = (*json)["key2"];
   EXPECT_TRUE( *((*tmp)[0]) == "value2-1" );
   EXPECT_TRUE( *((*tmp)[1]) == "value2-2" );
 

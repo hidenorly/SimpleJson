@@ -26,8 +26,6 @@
   #define null "null"
 #endif
 
-#include <iostream>
-
 
 #define JSON_SHARED_PTR 1
 
@@ -46,18 +44,18 @@ protected:
   std::map<std::string, std::shared_ptr<JSON>> mHashData;
   std::vector<std::shared_ptr<JSON>> mArrayData;
   std::string mValue;
+  std::weak_ptr<JSON> mUplinkRef;
 
 protected:
   static std::string getHierachyKey(std::vector<std::string> keys);
   static int getIndex(std::string key);
 
 public:
+  JSON(std::shared_ptr<JSON> pJsonUplink = nullptr);
+  virtual ~JSON();
+
   static std::shared_ptr<JSON> parse(std::string jsonString, std::shared_ptr<JSON> pJson = nullptr);
   virtual std::shared_ptr<JSON> getSharedPtr(void);
-
-public:
-  JSON(std::string jsonString = "");
-  virtual ~JSON();
 
   virtual int getCount(void);
 
@@ -78,6 +76,12 @@ public:
   std::shared_ptr<JSON> operator=(std::string value);
   std::shared_ptr<JSON> operator=(int value);
   std::shared_ptr<JSON> operator=(float value);
+  std::shared_ptr<JSON> operator=(std::shared_ptr<JSON> pJson);
+
+  std::shared_ptr<JSON> insert_or_assign(std::string key, std::shared_ptr<JSON> pJson);
+  std::shared_ptr<JSON> update(std::shared_ptr<JSON> pJson);
+  std::string getKeyFromJsonObject(std::shared_ptr<JSON> pJson);
+  void setUplink(std::shared_ptr<JSON> pUplinkJson);
 
   int getInt(void);
   float getFloat(void);
@@ -100,7 +104,7 @@ public:
 class JSONArray : public JSON
 {
 public:
-  JSONArray(){ mType = JSON_TYPE::TYPE_ARRAY; };
+  JSONArray(std::shared_ptr<JSON> pJsonUplink = nullptr):JSON(pJsonUplink){ mType = JSON_TYPE::TYPE_ARRAY; };
   virtual ~JSONArray(){};
 };
 
