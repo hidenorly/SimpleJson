@@ -29,13 +29,12 @@ protected:
   virtual void SetUp();
   virtual void TearDown();
 
-#if JSON_SHARED_PTR
-  void testGetterCommon(std::shared_ptr<JSON> json);
-#else
-  void testGetterCommon(JSON json);
-#endif /* JSON_SHARED_PTR */
+  void testGetterCommon(JSON_REF_TYPE json);
+  void dump(JSON_REF_TYPE json, std::string rootKey = "");
   void testFromString(void);
   void testSetter(void);
+
+  void testIterator(void);
 };
 
 #endif /* __TESTCASE_JSON_HPP__ */

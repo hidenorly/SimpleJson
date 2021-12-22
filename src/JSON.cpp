@@ -122,11 +122,22 @@ int JSON::getCount(void)
 }
 
 std::shared_ptr<JSON> JSON::operator[](std::string key){
-  if( !mHashData.contains( key ) ){
-    std::shared_ptr<JSON> json = std::make_shared<JSON>();
-    insert_or_assign( key, json );
+  std::shared_ptr<JSON> result = std::make_shared<JSON>();
+  *result = JSON_NULL;
+
+  if( isArray() ){
+    int nIndex = getIndex( key );
+    if( nIndex>=0 && nIndex<mArrayData.size() ){
+      result = mArrayData[ nIndex ];
+    }
+  } else {
+    if( mHashData.contains( key ) ){
+      result = mHashData[key];
+    } else {
+      insert_or_assign( key, result );
+    }
   }
-  return mHashData[key];
+  return result;
 }
 
 
@@ -168,6 +179,8 @@ void JSON::setValue(std::string value)
 {
   mValue = value;
   mType = JSON_TYPE::TYPE_VALUE;
+  mHashData.clear();
+  mArrayData.clear();
 
   std::shared_ptr<JSON> pUplinkJson = mUplinkRef.lock();
   if( pUplinkJson ){
@@ -285,7 +298,7 @@ bool JSON::getBoolean(void)
 bool JSON::isNull(void)
 {
   std::string val = getString();
-  return mType == JSON_TYPE::TYPE_VALUE && ( val.empty() || val == "null" );
+  return mType == JSON_TYPE::TYPE_VALUE && ( val.empty() || val == JSON_NULL );
 }
 
 bool JSON::isHash(void)
@@ -317,6 +330,8 @@ bool JSON::hasOwnProperty(std::string key)
 void JSON::push_back(std::shared_ptr<JSON> jsonValue)
 {
   mType = JSON_TYPE::TYPE_ARRAY;
+  mHashData.clear();
+  mValue.clear();
   if( jsonValue ){
     jsonValue->setUplink( getSharedPtr() );
   }
@@ -389,6 +404,27 @@ std::shared_ptr<JSON> JSON::getObjectRelativePath(std::string key, bool bForceEn
   }
 
   return result;
+}
+
+
+std::map<std::string, std::shared_ptr<JSON>>::iterator JSON::begin()
+{
+  return mHashData.begin();
+}
+
+std::map<std::string, std::shared_ptr<JSON>>::iterator JSON::end()
+{
+  return mHashData.end();
+}
+
+std::vector<std::shared_ptr<JSON>>::iterator JSON::getArrayIteratorBegin()
+{
+  return mArrayData.begin();
+}
+
+std::vector<std::shared_ptr<JSON>>::iterator JSON::getArrayIteratorEnd()
+{
+  return mArrayData.end();
 }
 
 

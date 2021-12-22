@@ -22,12 +22,19 @@
 #include <vector>
 #include <string>
 
-#ifndef null
-  #define null "null"
-#endif
+#ifndef JSON_NULL
+  #define JSON_NULL "null"
+#endif /* JSON_NULL */
 
 
 #define JSON_SHARED_PTR 1
+
+#if JSON_SHARED_PTR
+#define JSON_REF_TYPE std::shared_ptr<JSON>
+#else
+#define JSON_REF_TYPE JSON&
+#endif
+
 
 #if JSON_SHARED_PTR
 class JSON : public std::enable_shared_from_this<JSON>
@@ -57,7 +64,7 @@ public:
   static std::shared_ptr<JSON> parse(std::string jsonString, std::shared_ptr<JSON> pJson = nullptr);
   virtual std::shared_ptr<JSON> getSharedPtr(void);
 
-  virtual int getCount(void);
+  int getCount(void);
 
   std::shared_ptr<JSON> operator[](std::string key);
   std::shared_ptr<JSON> operator[](int nIndex);
@@ -94,8 +101,14 @@ public:
 
   bool hasOwnProperty(std::string key);
 
-  virtual void push_back(std::shared_ptr<JSON> jsonValue);
-  virtual void push_back(std::string value);
+  void push_back(std::shared_ptr<JSON> jsonValue);
+  void push_back(std::string value);
+
+  std::map<std::string, std::shared_ptr<JSON>>::iterator begin();
+  std::map<std::string, std::shared_ptr<JSON>>::iterator end();
+
+  std::vector<std::shared_ptr<JSON>>::iterator getArrayIteratorBegin();
+  std::vector<std::shared_ptr<JSON>>::iterator getArrayIteratorEnd();
 };
 
 #else /* JSON_SHARED_PTR */
@@ -107,5 +120,6 @@ public:
   JSONArray(std::shared_ptr<JSON> pJsonUplink = nullptr):JSON(pJsonUplink){ mType = JSON_TYPE::TYPE_ARRAY; };
   virtual ~JSONArray(){};
 };
+
 
 #endif /* __JSON_HPP__ */
