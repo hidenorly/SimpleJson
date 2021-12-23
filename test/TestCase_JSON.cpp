@@ -161,60 +161,76 @@ TEST_F(TestCase_JSON, testSetter)
   EXPECT_TRUE( (*json)["key6"]->getFloat() == 3.14159f );
   EXPECT_TRUE( (*json)["key6"]->getInt() == 3 );
 
+  std::shared_ptr<JSON> p = (*json)["key7"];
+  p->setValue("hoge7");
+  std::shared_ptr<JSON> v = std::make_shared<JSON>();
+  v->setValue( "hoge8" );
+  p->insert_or_assign("key8", v );
+  p = v;
+  v = std::make_shared<JSON>();
+  v->setValue( "hoge9" );
+  p->insert_or_assign("key9", v );
+
+  EXPECT_TRUE( *((*((*((*json)["key7"]))["key8"]))["key9"]) == "hoge9" );
+
+  p = json->getObjectRelativePath("key7.key8.key9");
+  EXPECT_TRUE( p->getString() == "hoge9" );
 #else /* JSON_SHARED_PTR */
 #endif /* JSON_SHARED_PTR */
 
   testGetterCommon( json );
+  JSON::dump( json );
 }
 
-void TestCase_JSON::dump(JSON_REF_TYPE json, std::string rootKey)
+TEST_F(TestCase_JSON, testSetObjectRelativePath)
 {
-  rootKey = rootKey.empty() ? rootKey : rootKey+".";
-#if JSON_SHARED_PTR
-  if( json ){
-    if( json->isHash() ){
-      for( auto& [key, pJson] : *json ){
-        std::string theKey = rootKey+key;
-        if( pJson->isValue() ){
-          std::cout << "[" << theKey << "]=" << pJson->getString() << std::endl;
-        } else {
-          dump( pJson, theKey );
-        }
-      }
-    } else if( json->isArray() ){
-      int i=0;
-      for( auto&& it = json->getArrayIteratorBegin(); it!= json->getArrayIteratorEnd(); it++){
-        std::string theKey = rootKey+std::to_string( i++ );
-        if( (*it)->isValue() ){
-          std::cout << "[" << theKey << "]=" << (*it)->getString() << std::endl;
-        } else {
-          dump( *it, theKey );
-        }
-      }
-    }
-  }
-#else /* JSON_SHARED_PTR */
-  if( json.isHash() ){
-    for( auto& [key, aJson] : json ){
-      std::string theKey = rootKey+key;
-      if( pJson->isValue() ){
-        std::cout << "[" << theKey << "]=" << aJson.getString() << std::endl;
-      } else {
-        dump( aJson, theKey );
-      }
-    }
-  } else if( json.isArray() ){
-    int i=0;
-    for( auto&& it = json.getArrayIteratorBegin(); it!= json.getArrayIteratorEnd(); it++){
-        std::string theKey = rootKey+std::to_string( i++ );
-      if( (*it).isValue() ){
-        std::cout << "[" << theKey << "]=" << (*it).getString() << std::endl;
-      } else {
-        dump( *it, theKey );
-      }
-    }
-  }
-#endif /* JSON_SHARED_PTR */
+  std::shared_ptr<JSON> json = std::make_shared<JSON>();
+
+  json->setObjectRelativePath( "key3", std::make_shared<JSONArray>());
+
+  std::shared_ptr<JSON> pValue = std::make_shared<JSON>();
+  pValue->setValue(true);
+  json->setObjectRelativePath( "key3.[0].key4", pValue);
+
+  pValue = std::make_shared<JSON>();
+  pValue->setValue(false);
+  json->setObjectRelativePath( "key3.[0].key5", pValue);
+
+  pValue = std::make_shared<JSON>();
+  pValue->setValue( 0 );
+  json->setObjectRelativePath( "key3.[1].key4", pValue);
+
+  pValue = std::make_shared<JSON>();
+  *pValue = JSON_NULL;
+  json->setObjectRelativePath( "key3.[1].key5", pValue);
+
+  JSON::dump( json );
+
+  EXPECT_TRUE( (*json)["key3"]->getCount() == 2 );
+  std::shared_ptr<JSON> tmp = (*json)["key3"];
+
+  tmp = (*tmp)[0];
+  EXPECT_TRUE( *((*tmp)["key4"]) == "true" );
+  EXPECT_TRUE( (*tmp)["key4"]->getBoolean() == true );
+  EXPECT_TRUE( *((*tmp)["key5"]) == "false" );
+  EXPECT_TRUE( (*tmp)["key5"]->getBoolean() == false );
+
+  tmp = (*tmp)[1];
+  EXPECT_TRUE( (*tmp)["key4"]->getInt() == 0 );
+  EXPECT_TRUE( *((*tmp)["key5"]) == JSON_NULL );
+  EXPECT_TRUE( (*tmp)["key5"]->isNull() );
+
+  tmp = json->getObjectRelativePath("key3.[0].key4");
+  EXPECT_TRUE( tmp->getBoolean() == true );
+
+  tmp = json->getObjectRelativePath("key3.[0].key5");
+  EXPECT_TRUE( tmp->getBoolean() == false );
+
+  tmp = json->getObjectRelativePath("key3.[1].key4");
+  EXPECT_TRUE( tmp->getInt() == 0 );
+
+  tmp = json->getObjectRelativePath("key3.[1].key5");
+  EXPECT_TRUE( tmp->isNull() );
 }
 
 
@@ -248,5 +264,5 @@ TEST_F(TestCase_JSON, testIterator)
 #else /* JSON_SHARED_PTR */
 #endif /* JSON_SHARED_PTR */
 
-  dump( json );
+  JSON::dump( json );
 }

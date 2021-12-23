@@ -146,6 +146,9 @@ std::shared_ptr<JSON> JSON::operator[](int nIndex)
   std::shared_ptr<JSON> jsonValue;
   switch( mType ){
     case JSON_TYPE::TYPE_ARRAY:
+      if( mArrayData.size() < ( nIndex + 1 ) ){
+        mArrayData.resize( nIndex + 1 );
+      }
       jsonValue = mArrayData[nIndex];
       break;
     case JSON_TYPE::TYPE_HASH:
@@ -173,6 +176,11 @@ std::string JSON::getString(void)
 bool JSON::operator==(std::string value)
 {
   return mValue == value;
+}
+
+void JSON::setValue(const char* value)
+{
+  setValue( std::string(value) );
 }
 
 void JSON::setValue(std::string value)
@@ -207,6 +215,12 @@ void JSON::setValue(bool value)
   setValue( std::string( value ? "true" : "false" ) );
 }
 
+std::shared_ptr<JSON> JSON::operator=(const char* value)
+{
+  setValue(value);
+  return getSharedPtr();
+}
+
 std::shared_ptr<JSON> JSON::operator=(std::string value)
 {
   setValue(value);
@@ -238,6 +252,9 @@ std::shared_ptr<JSON> JSON::operator=(std::shared_ptr<JSON> pJson)
 
 std::shared_ptr<JSON> JSON::insert_or_assign(std::string key, std::shared_ptr<JSON> pJson)
 {
+  mType = JSON_TYPE::TYPE_HASH;
+  mArrayData.clear();
+  mValue.clear();
   if( pJson ){
     pJson->setUplink( getSharedPtr() );
   }
@@ -282,12 +299,24 @@ void JSON::setUplink(std::shared_ptr<JSON> pUplinkJson)
 
 int JSON::getInt(void)
 {
-  return std::stoi( getString() );
+  int result = 0;
+  try {
+    result = std::stoi( getString() );
+  } catch (...) {
+    result = 0;
+  }
+  return result;
 }
 
 float JSON::getFloat(void)
 {
-  return std::stof( getString() );
+  float result = 0.0f;
+  try {
+    result = std::stof( getString() );
+  } catch (...) {
+    result = 0.0f;
+  }
+  return result;
 }
 
 bool JSON::getBoolean(void)
@@ -381,6 +410,9 @@ std::shared_ptr<JSON> JSON::getObjectRelativePath(std::string key, bool bForceEn
 
   while( hierachyKeys.hasNext() ){
     std::string theKey = hierachyKeys.getNext();
+    if( theKey.starts_with("[") && theKey.ends_with("]")){
+      theKey = theKey.substr( 1, theKey.size() - 2 );
+    }
 
     if( result && !theKey.empty() ){
       if( result->hasOwnProperty( theKey ) ){
@@ -404,6 +436,56 @@ std::shared_ptr<JSON> JSON::getObjectRelativePath(std::string key, bool bForceEn
   }
 
   return result;
+}
+
+void JSON::setObjectRelativePath(std::string key, std::shared_ptr<JSON> pValue)
+{
+  std::shared_ptr<JSON> pRef = getSharedPtr();
+
+  StringTokenizer hierachyKeys( key, "." );
+
+  while( hierachyKeys.hasNext() ){
+    std::string theKey = hierachyKeys.getNext();
+    bool isArray = false;
+    if( theKey.starts_with("[") && theKey.ends_with("]")){
+      theKey = theKey.substr( 1, theKey.size() - 2 );
+      isArray = true;
+    }
+    int nIndex = getIndex( theKey );
+
+    if( pRef && !theKey.empty() ){
+      if( pRef->hasOwnProperty( theKey ) ){
+        if( pRef->isHash() ){
+          pRef = (*pRef)[ theKey ];
+        } else if( pRef->isArray() ){
+          if( nIndex>=0 ){
+            pRef = (*pRef)[ nIndex ];
+          } else {
+            std::shared_ptr<JSON> tmp = std::make_shared<JSON>();
+            pRef->push_back( tmp );
+            pRef = tmp;
+          }
+        }
+      } else {
+        // not found
+        std::shared_ptr<JSON> tmp = std::make_shared<JSON>();
+        if( !isArray ){
+          pRef->insert_or_assign( theKey, tmp );
+        } else {
+          pRef->push_back( tmp );
+        }
+        pRef = tmp;
+      }
+    }
+  }
+
+  if( pRef ){
+    if( pValue->isValue() ){
+      *pRef = pValue->getString();
+    } else {
+      *pRef = pValue;
+    }
+  }
 }
 
 
@@ -430,7 +512,7 @@ std::vector<std::shared_ptr<JSON>>::iterator JSON::getArrayIteratorEnd()
 
 std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> pJson)
 {
-  if( pJson ){
+  if( !pJson ){
     pJson = std::make_shared<JSON>();
   }
   JSON::JSON_TYPE type = JSON::JSON_TYPE::TYPE_HASH;
@@ -531,7 +613,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
           key = "";
           std::string data;
           if( arrayQueue.contains( theHierachyKey ) ){
-            data = theHierachyKey + "[" + std::to_string( arrayQueue[theHierachyKey] ) + "]=" + value;
+            data = theHierachyKey + ".[" + std::to_string( arrayQueue[theHierachyKey] ) + "]=" + value;
             arrayQueue[theHierachyKey] = arrayQueue[theHierachyKey] + 1;
           } else {
              data = theHierachyKey + "=" + value;
@@ -575,10 +657,74 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
     }
   }
 
-  // debug dump
   for( auto& aData : flatData ){
-    std::cout << aData << std::endl;
+    StringTokenizer tok( aData, "=" );
+    if( tok.hasNext() ){
+      std::string key = tok.getNext();
+      std::shared_ptr<JSON> pValue = std::make_shared<JSON>();
+      *pValue = tok.getNext();
+//      std::cout << "--- " << key << "=" << pValue->getString() << std::endl;
+      if( pValue->getString() == "[]" ){
+        pValue = std::make_shared<JSONArray>();
+      }
+      pJson->setObjectRelativePath( key, pValue );
+    }
   }
+
+  // debug dump
+  std::cout << "debug dump" << std::endl;
+  dump( pJson );
 
   return pJson;
 }
+
+void JSON::dump(JSON_REF_TYPE json, std::string rootKey)
+{
+  rootKey = rootKey.empty() ? rootKey : rootKey+".";
+#if JSON_SHARED_PTR
+  if( json ){
+    if( json->isHash() ){
+      for( auto& [key, pJson] : *json ){
+        std::string theKey = rootKey+key;
+        if( pJson->isValue() ){
+          std::cout << "[" << theKey << "]=" << pJson->getString() << std::endl;
+        } else {
+          dump( pJson, theKey );
+        }
+      }
+    } else if( json->isArray() ){
+      int i=0;
+      for( auto&& it = json->getArrayIteratorBegin(); it!= json->getArrayIteratorEnd(); it++){
+        std::string theKey = rootKey + "[" + std::to_string( i++ ) +"]";
+        if( (*it)->isValue() ){
+          std::cout << "[" << theKey << "]=" << (*it)->getString() << std::endl;
+        } else {
+          dump( *it, theKey );
+        }
+      }
+    }
+  }
+#else /* JSON_SHARED_PTR */
+  if( json.isHash() ){
+    for( auto& [key, aJson] : json ){
+      std::string theKey = rootKey + key;
+      if( pJson->isValue() ){
+        std::cout << "[" << theKey << "]=" << aJson.getString() << std::endl;
+      } else {
+        dump( aJson, theKey );
+      }
+    }
+  } else if( json.isArray() ){
+    int i=0;
+    for( auto&& it = json.getArrayIteratorBegin(); it!= json.getArrayIteratorEnd(); it++){
+        std::string theKey = rootKey + std::to_string( i++ );
+      if( (*it).isValue() ){
+        std::cout << "[" << theKey << "]=" << (*it).getString() << std::endl;
+      } else {
+        dump( *it, theKey );
+      }
+    }
+  }
+#endif /* JSON_SHARED_PTR */
+}
+

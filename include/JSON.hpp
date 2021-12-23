@@ -65,21 +65,35 @@ public:
   virtual std::shared_ptr<JSON> getSharedPtr(void);
 
   int getCount(void);
+  bool operator==(std::string value);
+
+  bool isNull(void);
+  bool isHash(void);
+  bool isArray(void);
+  bool isValue(void);
+
+  bool hasOwnProperty(std::string key);
+
+  std::string getString(void);
+
+  int getInt(void);
+  float getFloat(void);
+  bool getBoolean(void);
 
   std::shared_ptr<JSON> operator[](std::string key);
   std::shared_ptr<JSON> operator[](int nIndex);
 
   std::shared_ptr<JSON> getObjectRelativePath(std::string key, bool bForceEnsure = false);
 
-  std::string getString(void);
-
-  bool operator==(std::string value);
+  void setObjectRelativePath(std::string key, std::shared_ptr<JSON> value);
 
   void setValue(std::string value);
+  void setValue(const char* value);
   void setValue(int value);
   void setValue(float value);
   void setValue(bool value);
 
+  std::shared_ptr<JSON> operator=(const char* value);
   std::shared_ptr<JSON> operator=(std::string value);
   std::shared_ptr<JSON> operator=(int value);
   std::shared_ptr<JSON> operator=(float value);
@@ -90,17 +104,6 @@ public:
   std::string getKeyFromJsonObject(std::shared_ptr<JSON> pJson);
   void setUplink(std::shared_ptr<JSON> pUplinkJson);
 
-  int getInt(void);
-  float getFloat(void);
-  bool getBoolean(void);
-
-  bool isNull(void);
-  bool isHash(void);
-  bool isArray(void);
-  bool isValue(void);
-
-  bool hasOwnProperty(std::string key);
-
   void push_back(std::shared_ptr<JSON> jsonValue);
   void push_back(std::string value);
 
@@ -109,6 +112,8 @@ public:
 
   std::vector<std::shared_ptr<JSON>>::iterator getArrayIteratorBegin();
   std::vector<std::shared_ptr<JSON>>::iterator getArrayIteratorEnd();
+
+  static void dump(JSON_REF_TYPE json, std::string rootKey = "");
 };
 
 #else /* JSON_SHARED_PTR */

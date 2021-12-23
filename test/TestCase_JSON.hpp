@@ -30,9 +30,9 @@ protected:
   virtual void TearDown();
 
   void testGetterCommon(JSON_REF_TYPE json);
-  void dump(JSON_REF_TYPE json, std::string rootKey = "");
   void testFromString(void);
   void testSetter(void);
+  void testSetObjectRelativePath(void);
 
   void testIterator(void);
 };
