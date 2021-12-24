@@ -84,8 +84,14 @@ public:
   std::shared_ptr<JSON> operator[](int nIndex);
 
   std::shared_ptr<JSON> getObjectRelativePath(std::string key, bool bForceEnsure = false);
+  std::string getStringRelativePath(std::string key);
 
   void setObjectRelativePath(std::string key, std::shared_ptr<JSON> value);
+  void setValueRelativePath(std::string key, const char* value);
+  void setValueRelativePath(std::string key, std::string value);
+  void setValueRelativePath(std::string key, int value);
+  void setValueRelativePath(std::string key, float value);
+  void setValueRelativePath(std::string key, bool value);
 
   void setValue(std::string value);
   void setValue(const char* value);

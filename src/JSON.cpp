@@ -404,42 +404,6 @@ int JSON::getIndex(std::string key)
 
 std::shared_ptr<JSON> JSON::getObjectRelativePath(std::string key, bool bForceEnsure)
 {
-  std::shared_ptr<JSON> result = getSharedPtr();
-
-  StringTokenizer hierachyKeys( key, "." );
-
-  while( hierachyKeys.hasNext() ){
-    std::string theKey = hierachyKeys.getNext();
-    if( theKey.starts_with("[") && theKey.ends_with("]")){
-      theKey = theKey.substr( 1, theKey.size() - 2 );
-    }
-
-    if( result && !theKey.empty() ){
-      if( result->hasOwnProperty( theKey ) ){
-        if( result->isHash() ){
-          result = (*result)[ theKey ];
-        } else if( result->isArray() ){
-          int nIndex = getIndex( theKey );
-          if( nIndex>=0 ){
-            result = (*result)[ nIndex ];
-          } else {
-            result = std::make_shared<JSON>();
-            break;
-          }
-        }
-      } else {
-        // not found
-        result = std::make_shared<JSON>();
-        break;
-      }
-    }
-  }
-
-  return result;
-}
-
-void JSON::setObjectRelativePath(std::string key, std::shared_ptr<JSON> pValue)
-{
   std::shared_ptr<JSON> pRef = getSharedPtr();
 
   StringTokenizer hierachyKeys( key, "." );
@@ -475,9 +439,28 @@ void JSON::setObjectRelativePath(std::string key, std::shared_ptr<JSON> pValue)
           pRef->push_back( tmp );
         }
         pRef = tmp;
+        if( !bForceEnsure ) break;
       }
     }
   }
+
+  if( !pRef ){
+    pRef = std::make_shared<JSON>();
+  }
+
+  return pRef;
+}
+
+std::string JSON::getStringRelativePath(std::string key)
+{
+  std::shared_ptr<JSON> pRef = getObjectRelativePath( key );
+  return pRef ? pRef->getString() : "";
+}
+
+
+void JSON::setObjectRelativePath(std::string key, std::shared_ptr<JSON> pValue)
+{
+  std::shared_ptr<JSON> pRef = getObjectRelativePath( key, true );
 
   if( pRef ){
     if( pValue->isValue() ){
@@ -487,6 +470,34 @@ void JSON::setObjectRelativePath(std::string key, std::shared_ptr<JSON> pValue)
     }
   }
 }
+
+void JSON::setValueRelativePath(std::string key, const char* value)
+{
+  setValueRelativePath( key, std::string( value ) );
+}
+
+void JSON::setValueRelativePath(std::string key, std::string value)
+{
+  std::shared_ptr<JSON> pValue = std::make_shared<JSON>();
+  pValue->setValue ( value );
+  setObjectRelativePath( key, pValue );
+}
+
+void JSON::setValueRelativePath(std::string key, int value)
+{
+  setValueRelativePath( key, std::to_string( value ) );
+}
+
+void JSON::setValueRelativePath(std::string key, float value)
+{
+  setValueRelativePath( key, std::to_string( value ) );
+}
+
+void JSON::setValueRelativePath(std::string key, bool value)
+{
+  setValueRelativePath( key, std::to_string( value ) );
+}
+
 
 
 std::map<std::string, std::shared_ptr<JSON>>::iterator JSON::begin()
@@ -663,7 +674,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
       std::string key = tok.getNext();
       std::shared_ptr<JSON> pValue = std::make_shared<JSON>();
       *pValue = tok.getNext();
-//      std::cout << "--- " << key << "=" << pValue->getString() << std::endl;
+      std::cout << "--- " << key << "=" << pValue->getString() << std::endl;
       if( pValue->getString() == "[]" ){
         pValue = std::make_shared<JSONArray>();
       }
