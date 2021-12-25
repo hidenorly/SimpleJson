@@ -266,3 +266,31 @@ TEST_F(TestCase_JSON, testIterator)
 
   JSON::dump( json );
 }
+
+
+TEST_F(TestCase_JSON, testSetValueRelativePath)
+{
+#if JSON_SHARED_PTR
+  std::shared_ptr<JSON> json = std::make_shared<JSON>();
+  json->setValueRelativePath("key1", "value1");
+  JSON::dump(json);
+  EXPECT_TRUE( *((*json)["key1"]) == "value1" );
+
+  json->setValueRelativePath("key7.key8.key9", "hoge9");
+  JSON::dump(json);
+  EXPECT_TRUE( *((*((*((*json)["key7"]))["key8"]))["key9"]) == "hoge9" );
+
+  json->setValueRelativePath("key1", 1);
+  JSON::dump(json);
+  EXPECT_TRUE( (*json)["key1"]->getInt() == 1 );
+
+  json->setValueRelativePath("key1", 3.14159f);
+  JSON::dump(json);
+  EXPECT_TRUE( (*json)["key1"]->getFloat() == 3.14159f );
+
+  json->setValueRelativePath("key1", true);
+  JSON::dump(json);
+  EXPECT_TRUE( (*json)["key1"]->getBoolean() );
+#else /* JSON_SHARED_PTR */
+#endif /* JSON_SHARED_PTR */
+}

@@ -495,7 +495,7 @@ void JSON::setValueRelativePath(std::string key, float value)
 
 void JSON::setValueRelativePath(std::string key, bool value)
 {
-  setValueRelativePath( key, std::to_string( value ) );
+  setValueRelativePath( key, value ? "true" : "false" );
 }
 
 

@@ -33,6 +33,7 @@ protected:
   void testFromString(void);
   void testSetter(void);
   void testSetObjectRelativePath(void);
+  void testSetValueRelativePath(void);
 
   void testIterator(void);
 };
