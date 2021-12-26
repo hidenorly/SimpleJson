@@ -279,6 +279,7 @@ TEST_F(TestCase_JSON, testSetValueRelativePath)
   json->setValueRelativePath("key7.key8.key9", "hoge9");
   JSON::dump(json);
   EXPECT_TRUE( *((*((*((*json)["key7"]))["key8"]))["key9"]) == "hoge9" );
+  EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
 
   json->setValueRelativePath("key1", 1);
   JSON::dump(json);
@@ -291,6 +292,32 @@ TEST_F(TestCase_JSON, testSetValueRelativePath)
   json->setValueRelativePath("key1", true);
   JSON::dump(json);
   EXPECT_TRUE( (*json)["key1"]->getBoolean() );
+
+  json->setValueRelativePath("\"key7\".\"key8\".\"key9\"", "hoge9");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
+
+  json->setValueRelativePath("key7.\"key8\".key9", "hoge9");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
+
+  json->setValueRelativePath("\"key7\".key8.key9", "hoge9");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
+
+  json->setValueRelativePath("key7.key8.\"key9\"", "hoge9");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
+
+  json->setValueRelativePath("\"key7\".key8.\"key9\"", "hoge9");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
+
+
+  json->setValueRelativePath("\"key7.1\".key8.\"key9.1\"", "hoge9.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "\"key7.1\".key8.\"key9.1\"") == "hoge9.1" );
+
 #else /* JSON_SHARED_PTR */
 #endif /* JSON_SHARED_PTR */
 }

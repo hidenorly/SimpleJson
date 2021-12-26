@@ -57,6 +57,53 @@ public:
   }
 };
 
+  // double quote robust utils
+class DQRobust
+{
+public:
+  static int find(std::string str, std::string token, int nPos = 0 ){
+    std::string token2 = "\"" + token + "\"";
+    std::string token3 = token + "\"";
+    std::string token4 = "\"" + token;
+
+    int pos2 = str.find( token2, nPos ); if( pos2 == std::string::npos ) pos2 = INT_MAX;
+    int pos3 = str.find( token3, nPos ); if( pos3 == std::string::npos ) pos3 = INT_MAX;
+    int pos4 = str.find( token4, nPos ); if( pos4 == std::string::npos ) pos4 = INT_MAX;
+    int pos = std::min( pos2, pos3 );
+    pos = std::min( pos, pos4 );
+    if( pos == INT_MAX ){
+      pos = str.find( token, nPos );
+    }
+    return pos;
+  }
+
+  static std::string substr(std::string str, int nStartPos = 0, int nLength = -1 ){
+    nLength = ( nLength == -1 ) ? str.length() - nStartPos : nLength;
+    std::string result = str.substr( nStartPos, nLength );
+
+    if( result.starts_with("\"") ){
+      result = result.substr( 1 );
+    }
+
+    if( result.ends_with("\"") ){
+      result = result.substr( 0, result.length() - 1 );
+    }
+
+    return result;
+  }
+
+  static int getNextPos(std::string str, std::string token, int nPos){
+    int result = nPos + token.length();
+    int nSize = str.length();
+
+    if( (result <= nSize) && str.substr( result, 1 ) == "\"" ) result++;
+    if( (result <= nSize) && str.substr( result, 1 ) == token ) result = result + token.length();
+    if( (result <= nSize) && str.substr( result, 1 ) == "\"" ) result++;
+
+    result = result <= nSize ? result : nSize;
+    return result;
+  }
+};
 
 class StringTokenizer
 {
@@ -78,12 +125,12 @@ public:
   std::string getNext(){
     std::string result = "";
 
-    int pos = mBuf.find( mToken, mPos );
+    int pos = DQRobust::find( mBuf, mToken, mPos );
     if( pos != std::string::npos ){
-      result = mBuf.substr( mPos, pos - mPos );
-      mPos = pos + mTokenLength;
+      result = DQRobust::substr( mBuf, mPos, pos - mPos );
+      mPos = DQRobust::getNextPos( mBuf, mToken, pos );
     } else {
-      result = mBuf.substr( mPos );
+      result = DQRobust::substr( mBuf, mPos );
       mPos = mBuf.length();
     }
 
