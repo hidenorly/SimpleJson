@@ -56,6 +56,8 @@ protected:
 protected:
   static std::string getHierachyKey(std::vector<std::string> keys);
   static int getIndex(std::string key);
+  bool isArrayKey(std::string key);
+  bool isArrayQueue(const std::vector<std::string>& keyQueue);
 
 public:
   JSON(std::shared_ptr<JSON> pJsonUplink = nullptr);

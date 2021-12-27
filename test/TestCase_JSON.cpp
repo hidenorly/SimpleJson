@@ -313,11 +313,33 @@ TEST_F(TestCase_JSON, testSetValueRelativePath)
   JSON::dump(json);
   EXPECT_TRUE( json->getStringRelativePath( "key7.key8.key9") == "hoge9" );
 
-
   json->setValueRelativePath("\"key7.1\".key8.\"key9.1\"", "hoge9.1");
   JSON::dump(json);
   EXPECT_TRUE( json->getStringRelativePath( "\"key7.1\".key8.\"key9.1\"") == "hoge9.1" );
 
+  json->setValueRelativePath("\"key7.1\".\"key8.1\".\"key9.1\"", "hoge8.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "\"key7.1\".\"key8.1\".\"key9.1\"") == "hoge8.1" );
+
+  json->setValueRelativePath("\"key7.1\".\"key8.1\".key9", "hoge8.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "\"key7.1\".\"key8.1\".key9") == "hoge8.1" );
+
+  json->setValueRelativePath("key7.\"key8.1\".key9", "hoge8.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.\"key8.1\".key9") == "hoge8.1" );
+
+  json->setValueRelativePath("key7.\"key8.1\".\"key9.1\"", "hoge8.1&9.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key7.\"key8.1\".\"key9.1\"") == "hoge8.1&9.1" );
+
+  json->setValueRelativePath("\"key8.1\"", "hoge8.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "\"key8.1\"" ) == "hoge8.1" );
+
+  json->setValueRelativePath("key8.\"key8.1\"", "hoge8.1");
+  JSON::dump(json);
+  EXPECT_TRUE( json->getStringRelativePath( "key8.\"key8.1\"" ) == "hoge8.1" );
 #else /* JSON_SHARED_PTR */
 #endif /* JSON_SHARED_PTR */
 }

@@ -23,35 +23,28 @@ class StringUtil
 public:
   static std::string trim(std::string value, std::string trimStrings )
   {
-    bool bFound = false;
-    for(int i=0, trimSize = trimStrings.size(); i<trimSize; i++){
-      std::string trimString = trimStrings.substr( i, 1 );
-      do
-      {
-        bFound = false;
-        if( value.starts_with( trimString ) ){
-          value = value.substr( 1, value.size() -1 );
-          bFound = true;
-        }
-        if( value.ends_with( trimString ) ){
-          value = value.substr( 0, value.size() -1 );
-          bFound = true;
-        }
-      } while (bFound);
-    }
-    // workaround for unable to find "\"" in the above loop....
-    do
-    {
-      bFound = false;
-      if( value.starts_with( "\"" ) ){
-        value = value.substr( 1, value.size() -1 );
-        bFound = true;
+    bool bFoundEx = false;
+    do {
+      bFoundEx = false;
+      for(int i=0, trimSize = trimStrings.size(); i<trimSize; i++){
+        std::string trimString = trimStrings.substr( i, 1 );
+        bool bFound = false;
+        do
+        {
+          bFound = false;
+          if( value.starts_with( trimString ) ){
+            value = value.substr( 1, value.size() -1 );
+            bFound = true;
+            bFoundEx = true;
+          }
+          if( value.ends_with( trimString ) ){
+            value = value.substr( 0, value.size() -1 );
+            bFound = true;
+            bFoundEx = true;
+          }
+        } while (bFound);
       }
-      if( value.ends_with( "\"" ) ){
-        value = value.substr( 0, value.size() -1 );
-        bFound = true;
-      }
-    } while (bFound);
+    } while( bFoundEx );
 
     return value;
   }
@@ -62,16 +55,17 @@ class DQRobust
 {
 public:
   static int find(std::string str, std::string token, int nPos = 0 ){
-    std::string token2 = "\"" + token + "\"";
-    std::string token3 = token + "\"";
-    std::string token4 = "\"" + token;
-
-    int pos2 = str.find( token2, nPos ); if( pos2 == std::string::npos ) pos2 = INT_MAX;
-    int pos3 = str.find( token3, nPos ); if( pos3 == std::string::npos ) pos3 = INT_MAX;
-    int pos4 = str.find( token4, nPos ); if( pos4 == std::string::npos ) pos4 = INT_MAX;
-    int pos = std::min( pos2, pos3 );
-    pos = std::min( pos, pos4 );
-    if( pos == INT_MAX ){
+    int pos = (int)std::string::npos;
+    if( str.substr( nPos, 1 ) == "\"" || ( nPos>0 && str.substr( nPos - 1, 1 ) == "\"" ) ){
+      std::string token2 = "\"" + token;
+      pos = str.find( token2, nPos );
+      if( pos == std::string::npos ){
+        pos = str.find( token, nPos );
+        if( str.find( token, pos + 1) == std::string::npos && str.ends_with("\"") ){
+          pos = (int)std::string::npos;
+        }
+      }
+    } else {
       pos = str.find( token, nPos );
     }
     return pos;
@@ -567,6 +561,16 @@ std::vector<std::shared_ptr<JSON>>::iterator JSON::getArrayIteratorEnd()
   return mArrayData.end();
 }
 
+bool JSON::isArrayKey(std::string key)
+{
+  return key.starts_with("[") && key.ends_with("]");
+}
+
+bool JSON::isArrayQueue(const std::vector<std::string>& keyQueue)
+{
+  return keyQueue.back().starts_with("[") && keyQueue.back().ends_with("]");
+}
+
 
 std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> pJson)
 {
@@ -579,6 +583,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
   int nKeyStart = 0, nKeyEnd = 0, nValueStart = 0, nValueEnd = 0;
   bool bFoundValue = false;
   bool bFoundBlacket = false;
+  bool bFoundArray = false;
   bool bFoundEnd = false;
   std::vector<std::string> keyQueue;
   std::map<std::string, int> arrayQueue;
@@ -599,6 +604,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
           keyQueue.push_back( key );
           key = "";
           nKeyStart = i + 1;
+          bFoundBlacket = true;
         }
         break;
       case '}':
@@ -608,10 +614,12 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
           type = queue.back();
           nValueEnd = i - 1;
           bFoundValue = true;
+          bFoundBlacket = true;
         }
         break;
       case '[':
         {
+          bFoundArray = true;
           bFoundBlacket = true;
           type = JSON::JSON_TYPE::TYPE_ARRAY;
           queue.push_back( type );
@@ -628,6 +636,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
           type = queue.back();
           nValueEnd = i - 1;
           bFoundValue = true;
+          bFoundBlacket = true;
         }
         break;
       case ':':
@@ -692,7 +701,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
           break;
         case JSON::JSON_TYPE::TYPE_ARRAY:
           {
-            if( bFoundBlacket && !arrayQueue.contains( theHierachyKey ) ){
+            if( bFoundArray && !arrayQueue.contains( theHierachyKey ) ){
               arrayQueue.insert_or_assign( theHierachyKey, 0 );
               std::string data = theHierachyKey + "=[]";
               flatData.push_back( data );
@@ -708,11 +717,12 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
 
     prevType = type;
     bFoundValue = false;
-    bFoundBlacket = false;
+    bFoundArray = false;
     if( bFoundEnd ){
       keyQueue.pop_back();
       bFoundEnd = false;
     }
+    bFoundBlacket = false;
   }
 
   for( auto& aData : flatData ){
@@ -738,14 +748,14 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
 
 void JSON::dump(JSON_REF_TYPE json, std::string rootKey)
 {
-  rootKey = rootKey.empty() ? rootKey : rootKey+".";
+//  rootKey = rootKey.empty() ? rootKey : rootKey+".";
 #if JSON_SHARED_PTR
   if( json ){
     if( json->isHash() ){
       for( auto& [key, pJson] : *json ){
-        std::string theKey = rootKey+key;
+        std::string theKey = rootKey + "[\"" + key + "\"]";
         if( pJson->isValue() ){
-          std::cout << "[" << theKey << "]=" << pJson->getString() << std::endl;
+          std::cout << theKey << "=" << pJson->getString() << std::endl;
         } else {
           dump( pJson, theKey );
         }
@@ -755,7 +765,7 @@ void JSON::dump(JSON_REF_TYPE json, std::string rootKey)
       for( auto&& it = json->getArrayIteratorBegin(); it!= json->getArrayIteratorEnd(); it++){
         std::string theKey = rootKey + "[" + std::to_string( i++ ) +"]";
         if( (*it)->isValue() ){
-          std::cout << "[" << theKey << "]=" << (*it)->getString() << std::endl;
+          std::cout << theKey << "=" << (*it)->getString() << std::endl;
         } else {
           dump( *it, theKey );
         }
