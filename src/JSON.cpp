@@ -26,7 +26,7 @@ public:
     bool bFoundEx = false;
     do {
       bFoundEx = false;
-      for(int i=0, trimSize = trimStrings.size(); i<trimSize; i++){
+      for(int i = 0, trimSize = trimStrings.size(); i<trimSize; i++){
         std::string trimString = trimStrings.substr( i, 1 );
         bool bFound = false;
         do
@@ -54,6 +54,35 @@ public:
 class DQRobust
 {
 public:
+  static std::string trim(std::string value, std::string trimStrings)
+  {
+    std::string trimStrings2;
+    for(int i = 0, trimSize = trimStrings.size(); i<trimSize; i++){
+      std::string aTrimString = trimStrings.substr( i, 1 );
+      if( aTrimString != "\"" ){
+        trimStrings2 += aTrimString;
+      }
+    }
+
+    // FIX
+    value = StringUtil::trim( value, trimStrings2 );
+
+    bool bFound = false;
+    do {
+      bFound = false;
+      if( value.starts_with("\"") ){
+        value = value.substr( 1, value.size() - 1 );
+        bFound = true;
+      }
+      if( value.ends_with("\"") ){
+        value = value.substr( 0, value.size() - 1 );
+        bFound = true;
+      }
+    } while( bFound );
+
+    return value;
+  }
+
   static int find(std::string str, std::string token, int nPos = 0 ){
     int pos = (int)std::string::npos;
     if( str.substr( nPos, 1 ) == "\"" || ( nPos>0 && str.substr( nPos - 1, 1 ) == "\"" ) ){
@@ -658,7 +687,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
     if( bFoundValue ){
       std::string value;
       if( nKeyEnd >= nKeyStart ){
-        key = StringUtil::trim( jsonString.substr( nKeyStart, nKeyEnd-nKeyStart + 1 ), " \"[],{}:" );
+        key = DQRobust::trim( jsonString.substr( nKeyStart, nKeyEnd-nKeyStart + 1 ), " \"[],{}:" );
         if( !key.empty() ){
           nKeyStart = nKeyEnd + 2;
           nValueStart = nKeyStart;
@@ -674,7 +703,7 @@ std::shared_ptr<JSON> JSON::parse(std::string jsonString, std::shared_ptr<JSON> 
       }
 
       if( nValueEnd >= nValueStart){
-        value = StringUtil::trim( jsonString.substr( nValueStart, nValueEnd-nValueStart + 1 ), " \"[],{}:" );
+        value = DQRobust::trim( jsonString.substr( nValueStart, nValueEnd-nValueStart + 1 ), " \"[],{}:" );
         if( !value.empty() ){
           nValueStart = nKeyStart = i + 1;
           key = "";
