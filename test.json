@@ -21,5 +21,15 @@
 		"key10":{
 			"key11":"value11"
 		}
-	}
+	},
+	"key12":[
+		[
+			"value12",
+			"value13"
+		],
+		[
+			"value14",
+			"value15"
+		]
+	]
 }
